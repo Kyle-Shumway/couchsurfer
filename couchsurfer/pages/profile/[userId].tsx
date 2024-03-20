@@ -3,23 +3,32 @@
 import { useEffect, useState } from "react";
 import { NextPage } from "next";
 import { useRouter } from "next/router";
-import { getUsers, getPostsByUserId } from "../../app/api";
+import {
+  getPostsByUserId,
+  getUserById,
+  getFriendsByUserId,
+} from "../../app/api";
 import { Post, User } from "../../app/types";
-import Image from "next/image";
+import Avatar from "@/app/components/avatar";
+import RootLayout from "@/app/layout";
+import PostComponent from "@/app/components/post";
+import Link from "next/link";
 
 const ProfilePage: NextPage = () => {
   const router = useRouter();
   const { userId } = router.query;
   const [user, setUser] = useState<User | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [friends, setFriends] = useState<User[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const fetchedUsers = await getUsers();
-      const foundUser = fetchedUsers.find((user) => user.id === userId);
-      setUser(foundUser || null);
+      const fetchedUser = await getUserById(userId as string);
+      setUser(fetchedUser || null);
       const fetchedPosts = await getPostsByUserId(userId as string);
       setPosts(fetchedPosts);
+      const fetchedFriends = await getFriendsByUserId(userId as string);
+      setFriends(fetchedFriends);
     };
     if (userId) {
       fetchData();
@@ -31,28 +40,37 @@ const ProfilePage: NextPage = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 bg-white rounded-lg shadow-lg">
-      <div className="flex flex-row">
-        <Image
-          src={`https://i.pravatar.cc/300`}
-          alt="Profile Picture"
-          width="150"
-          height="150"
+    <RootLayout>
+      <div className="max-w-4xl mx-auto px-4 py-8 rounded-lg shadow-lg text-black">
+        <Avatar
+          width={150}
+          height={150}
+          username={user.name}
+          userId={user.id}
         />
-
-        <p className="text-3xl font-bold">{user.name}</p>
+        <h2 className="text-2xl font-bold mb-4">My Posts</h2>
+        <ul className="space-y-4">
+          {posts.map((post) => (
+            <PostComponent key={post.id} username={user.name} {...post} />
+          ))}
+        </ul>
+        <ul className="space-y-4">
+          <h2 className="text-2xl font-bold mb-4">My Friends</h2>
+          {friends.map((friend) => (
+            <Link key={friend.id} href={`/profile/${friend.id}`}>
+              <div className="border p-4 rounded-md shadow-md">
+                <Avatar
+                  width={50}
+                  height={50}
+                  username={friend.name}
+                  userId={friend.id}
+                />
+              </div>
+            </Link>
+          ))}
+        </ul>
       </div>
-
-      <h2 className="text-2xl font-bold mb-4">My Posts</h2>
-      <div className="space-y-4">
-        {posts.map((post) => (
-          <div key={post.id} className="border p-4 rounded-md shadow-md">
-            <h3 className="text-lg font-semibold">{post.title}</h3>
-            <p>{post.content}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+    </RootLayout>
   );
 };
 
